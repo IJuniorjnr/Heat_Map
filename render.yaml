@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: your-app-name
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: python app.py
+    envVars:
+      - key: SECRET_KEY
+        value: '35769120'
+      - key: DATABASE_URL
+        fromDatabase:
+          name: your-database-name
+          property: connectionString

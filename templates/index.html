@@ -1,0 +1,155 @@
+<!-- templates/index.html -->
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Cronômetros RC Loading</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f5f5f5;
+        }
+        
+        .timer-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+        
+        .timer-card {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            min-width: 250px;
+        }
+        
+        .location {
+            font-size: 1.2em;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 10px;
+        }
+        
+        .device-code {
+            color: #666;
+            margin-bottom: 5px;
+        }
+        
+        .timer {
+            font-size: 2em;
+            font-weight: bold;
+            color: #2196F3;
+            margin: 10px 0;
+        }
+        
+        .creation-time {
+            color: #888;
+            font-size: 0.9em;
+        }
+
+        .warning {
+            color: #f44336;
+        }
+        
+        .alert {
+            color: #ff9800;
+        }
+
+        .last-update {
+            position: fixed;
+            bottom: 10px;
+            right: 10px;
+            background: rgba(0,0,0,0.7);
+            color: white;
+            padding: 5px 10px;
+            border-radius: 4px;
+            font-size: 0.8em;
+        }
+    </style>
+</head>
+<body>
+    <h1>Cronômetros RC Loading</h1>
+    <div id="timer-container" class="timer-container"></div>
+    <div id="last-update" class="last-update"></div>
+
+    <script>
+        // Armazena os dados mais recentes do servidor
+        let timerData = [];
+        
+        function formatTime(seconds) {
+            const hours = Math.floor(seconds / 3600);
+            const minutes = Math.floor((seconds % 3600) / 60);
+            const secs = Math.floor(seconds % 60);
+            return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+        }
+
+        function getTimerClass(seconds) {
+            if (seconds > 3600) return 'warning';  // Mais de 1 hora
+            if (seconds > 1800) return 'alert';    // Mais de 30 minutos
+            return '';
+        }
+
+        function updateLastFetchTime() {
+            const now = new Date();
+            document.getElementById('last-update').textContent = 
+                `Última atualização: ${now.toLocaleTimeString()}`;
+        }
+
+        // Atualiza os cronômetros sem fazer nova requisição
+        function updateTimersLocally() {
+            const container = document.getElementById('timer-container');
+            const now = new Date();
+
+            timerData.forEach((item, index) => {
+                const creationTime = new Date(item.creation_time);
+                const elapsedSeconds = Math.floor((now - creationTime) / 1000);
+                
+                // Atualiza apenas o timer e sua classe, mantendo o resto do card
+                const timerElement = container.children[index].querySelector('.timer');
+                timerElement.textContent = formatTime(elapsedSeconds);
+                timerElement.className = `timer ${getTimerClass(elapsedSeconds)}`;
+            });
+        }
+
+        // Busca dados do servidor
+        function fetchServerData() {
+            fetch('/mapa')
+                .then(response => response.json())
+                .then(data => {
+                    timerData = data;  // Atualiza os dados armazenados
+                    const container = document.getElementById('timer-container');
+                    container.innerHTML = ''; // Limpa o container
+
+                    data.forEach(item => {
+                        const creationTime = new Date(item.creation_time);
+                        const now = new Date();
+                        const elapsedSeconds = Math.floor((now - creationTime) / 1000);
+
+                        const timerCard = document.createElement('div');
+                        timerCard.className = 'timer-card';
+                        timerCard.innerHTML = `
+                            <div class="location">${item.actual_arrival_destination}</div>
+                            <div class="timer ${getTimerClass(elapsedSeconds)}">${formatTime(elapsedSeconds)}</div>
+                            <div class="creation-time">Iniciado em: ${item.creation_time}</div>
+                        `;
+                        container.appendChild(timerCard);
+                    });
+                    updateLastFetchTime();
+                })
+                .catch(error => {
+                    console.error('Erro ao buscar dados:', error);
+                });
+        }
+
+        // Inicialização
+        fetchServerData();  // Primeira busca
+
+        // Atualiza localmente a cada segundo
+        setInterval(updateTimersLocally, 1000);
+
+        // Busca novos dados do servidor a cada 30 segundos
+        setInterval(fetchServerData, 30000);
+    </script>
+</body>
+</html>

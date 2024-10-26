@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Dashboard de Timers - Sorter</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+            background-color: #f0f2f5;
+            color: #1a1a1a;
+        }
+
+        .header {
+            background-color: #ffffff;
+            padding: 1.5rem;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            top: 0;
+            z-index: 100;
+        }
+
+        .header h1 {
+            color: #2c3e50;
+            font-size: 1.8rem;
+            margin-bottom: 0.5rem;
+            text-align: center;
+        }
+
+        .dashboard-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            padding: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 1rem;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+            text-align: center;
+        }
+
+        .stat-card h3 {
+            font-size: 0.9rem;
+            color: #6c757d;
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-card .value {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #2c3e50;
+        }
+
+        .container {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 1.5rem;
+            padding: 1.5rem;
+            margin: 0 auto;
+            max-width: 1440px;
+        }
+
+        .card {
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+            transition: all 0.3s ease;
+            text-align: center;
+        }
+
+        .card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        .card-header {
+            padding: 1rem;
+            border-bottom: 1px solid rgba(0, 0, 0, 1);
+        }
+
+        .card-header h3 {
+            color: white;
+        }
+
+        .card-content {
+            padding: 1.5rem;
+        }
+
+        .timer {
+            font-size: 2rem;
+            font-weight: bold;
+            margin: 1rem 0;
+            color: white;
+        }
+
+        .package-info {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-top: 1rem;
+            padding-top: 1rem;
+            font-size: 0.95rem;
+            color: white;
+        }
+
+        .status-normal {
+            background-color: #10b981;
+        }
+
+        .status-warning {
+            background-color: #f59e0b;
+        }
+
+        .status-alert {
+            background-color: #ef4444;
+        }
+
+        .status-critical {
+            background-color: #1f2937;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                grid-template-columns: 1fr;
+            }
+
+            .dashboard-stats {
+                grid-template-columns: 1fr 1fr;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="header">
+        <h1>Monitor de Timers - <span id="sorterTitle"></span></h1>
+        <div class="dashboard-stats">
+            <div class="stat-card">
+                <h3>Total de Pacotes na canalização</h3>
+                <div class="value" id="totalPackages">0</div>
+            </div>
+            <div class="stat-card">
+                <h3>Tempo Médio</h3>
+                <div class="value" id="averageTime">00:00:00</div>
+            </div>
+            <div class="stat-card">
+                <h3>Status Crítico</h3>
+                <div class="value" id="criticalCount">0</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="container" id="timerContainer">
+        <!-- Cards serão inseridos aqui via JavaScript -->
+    </div>
+
+    <script>
+        const deviceCode = '{{ device_code }}';
+        document.getElementById('sorterTitle').textContent = deviceCode;
+        
+        let currentTimers = [];
+        let activeTimerIntervals = [];
+
+        const socket = io();
+
+        socket.on('connect', () => {
+            console.log('Conectado ao servidor Socket.IO');
+            socket.emit('start_device_updates', deviceCode);
+        });
+
+        socket.on(`update_${deviceCode}`, (data) => {
+            console.log('Dados atualizados recebidos:', data);
+            // Limpar intervalos existentes
+            activeTimerIntervals.forEach(interval => clearInterval(interval));
+            activeTimerIntervals = [];
+            displayTimers(data);
+        });
+
+        function formatTime(seconds) {
+            const hrs = Math.floor(seconds / 3600);
+            const mins = Math.floor((seconds % 3600) / 60);
+            const secs = seconds % 60;
+            return `${hrs.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+        }
+
+        function getStatusClass(seconds) {
+            if (seconds < 3600) return 'status-normal';
+            if (seconds < 5400) return 'status-warning';
+            if (seconds < 7200) return 'status-alert';
+            return 'status-critical';
+        }
+
+        function updateCriticalCount() {
+            const criticalCount = currentTimers.filter(timer => timer.currentSeconds >= 7200).length;
+            document.getElementById('criticalCount').textContent = criticalCount;
+        }
+
+        function updateAverageTime() {
+            if (currentTimers.length > 0) {
+                const totalSeconds = currentTimers.reduce((sum, timer) => sum + timer.currentSeconds, 0);
+                const averageSeconds = totalSeconds / currentTimers.length;
+                document.getElementById('averageTime').textContent = formatTime(Math.floor(averageSeconds));
+            }
+        }
+
+        function createTimerCard(row, isOutbound = false) {
+            const card = document.createElement('div');
+            const statusClass = getStatusClass(row.TimeDifference_Seconds);
+            card.className = `card ${statusClass}`;
+
+            const packagesField = isOutbound ? 'NumberOfPackages' : 'NumberOfSubPackages';
+            const packagesLabel = isOutbound ? 'Pacotes' : 'SubPacotes';
+
+            card.innerHTML = `
+                <div class="card-header">
+                    <h3>${row.ActualArrivalDestination}</h3>
+                </div>
+                <div class="card-content">
+                    <div class="timer" data-seconds="${row.TimeDifference_Seconds}">
+                        ${formatTime(row.TimeDifference_Seconds)}
+                    </div>
+                    <div class="package-info">
+                        <span>${packagesLabel}: ${row[packagesField]}</span>
+                    </div>
+                </div>
+            `;
+
+            return card;
+        }
+
+        function updateStats(data) {
+            const totalSheinbox = data.sheinbox.reduce((sum, item) => sum + (item.NumberOfSubPackages || 0), 0);
+            const totalOutbound = data.outbound.reduce((sum, item) => sum + (item.NumberOfPackages || 0), 0);
+            document.getElementById('totalPackages').textContent = totalSheinbox + totalOutbound;
+
+            currentTimers = [
+                ...data.sheinbox.map(item => ({
+                    id: item.ActualArrivalDestination,
+                    currentSeconds: item.TimeDifference_Seconds
+                })),
+                ...data.outbound.map(item => ({
+                    id: item.ActualArrivalDestination,
+                    currentSeconds: item.TimeDifference_Seconds
+                }))
+            ];
+
+            updateCriticalCount();
+            updateAverageTime();
+        }
+
+        function displayTimers(data) {
+            const container = document.getElementById('timerContainer');
+            container.innerHTML = '';
+
+            // Combine and sort all timers
+            const allTimers = [
+                ...data.sheinbox.map(item => ({ ...item, isOutbound: false })),
+                ...data.outbound.map(item => ({ ...item, isOutbound: true }))
+            ].sort((a, b) => {
+                return a.ActualArrivalDestination.localeCompare(b.ActualArrivalDestination,
+                    'pt-BR', { sensitivity: 'base' });
+            });
+
+            // Display sorted cards
+            allTimers.forEach(row => {
+                container.appendChild(createTimerCard(row, row.isOutbound));
+            });
+
+            updateStats(data);
+            startTimers();
+        }
+
+        function startTimers() {
+            const timers = document.querySelectorAll('.timer');
+
+            timers.forEach(timer => {
+                let seconds = parseInt(timer.dataset.seconds);
+                const interval = setInterval(() => {
+                    seconds++;
+                    timer.textContent = formatTime(seconds);
+
+                    const card = timer.closest('.card');
+                    const newStatusClass = getStatusClass(seconds);
+                    card.className = `card ${newStatusClass}`;
+
+                    const cardId = card.querySelector('.card-header h3').textContent;
+                    const timerIndex = currentTimers.findIndex(t => t.id === cardId);
+                    if (timerIndex !== -1) {
+                        currentTimers[timerIndex].currentSeconds = seconds;
+                    }
+
+                    updateCriticalCount();
+                    updateAverageTime();
+                }, 1000);
+                activeTimerIntervals.push(interval);
+            });
+        }
+
+        // Inicialização com dados iniciais
+        window.onload = () => {
+            const initialData = {{ data | tojson }};
+            console.log("Dados iniciais carregados:", initialData);
+            displayTimers(initialData);
+        };
+    </script>
+</body>
+</html>

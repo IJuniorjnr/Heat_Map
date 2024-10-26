@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Resultados da Consulta</title>
+</head>
+<body>
+    <h1>Resultados da Consulta</h1>
+    {% if data %}
+        <table border="1">
+            <thead>
+                <tr>
+                    <th>DestinationWarehouseCode</th>
+                    <th>DestinationWarehouseArea</th>
+                    <th>ShelfContainerNumber</th>
+                    <th>DeviceCode</th>
+                    <th>ActualArrivalDestination</th>
+                    <th>NumberOfSubPackages</th>
+                    <th>TimeDifference_Seconds</th>
+                    <th>TimeDifference</th>
+                    <th>TransferStatus</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in data %}
+                    <tr>
+                        <td>{{ row.DestinationWarehouseCode }}</td>
+                        <td>{{ row.DestinationWarehouseArea }}</td>
+                        <td>{{ row.ShelfContainerNumber }}</td>
+                        <td>{{ row.DeviceCode }}</td>
+                        <td>{{ row.ActualArrivalDestination }}</td>
+                        <td>{{ row.NumberOfSubPackages }}</td>
+                        <td>{{ row.TimeDifference_Seconds }}</td>
+                        <td>{{ row.TimeDifference }}</td>
+                        <td>{{ row.TransferStatus }}</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% else %}
+        <p>{{ data }}</p>
+    {% endif %}
+</body>
+</html>

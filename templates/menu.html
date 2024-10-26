@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Dashboard Central - Sorters</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+        background-color: #f0f2f5;
+        color: #1a1a1a;
+        min-height: 100vh;
+      }
+
+      .header {
+        background-color: #ffffff;
+        padding: 2rem;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        text-align: center;
+      }
+
+      .header h1 {
+        color: #2c3e50;
+        font-size: 2.5rem;
+        margin-bottom: 1rem;
+      }
+
+      .header p {
+        color: #6c757d;
+        font-size: 1.1rem;
+        max-width: 600px;
+        margin: 0 auto;
+      }
+
+      .container {
+        max-width: 1200px;
+        margin: 2rem auto;
+        padding: 0 1.5rem;
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(5, 1fr);
+        gap: 1.5rem;
+        margin-top: 2rem;
+      }
+
+      .card {
+        background: white;
+        border-radius: 12px;
+        overflow: hidden;
+        transition: all 0.3s ease;
+        cursor: pointer;
+        position: relative;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      }
+
+      .card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 8px 15px rgba(0, 0, 0, 0.2);
+      }
+
+      .card.overtime {
+        grid-column: 1 / -1;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      }
+
+      .card.overtime h2,
+      .card.overtime p {
+        color: white;
+      }
+
+      .card-content {
+        padding: 2rem;
+        text-align: center;
+      }
+
+      .card h2 {
+        font-size: 1.5rem;
+        color: #2c3e50;
+        margin-bottom: 0.5rem;
+      }
+
+      .card p {
+        color: #6c757d;
+        font-size: 0.95rem;
+        margin-bottom: 1rem;
+      }
+
+      .card-icon {
+        background: #f8f9fa;
+        width: 64px;
+        height: 64px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto 1rem;
+        font-size: 1.5rem;
+        color: #2c3e50;
+      }
+
+      .overtime .card-icon {
+        background: rgba(255, 255, 255, 0.2);
+        color: white;
+      }
+
+      @media (max-width: 768px) {
+        .header h1 {
+          font-size: 2rem;
+        }
+
+        .header p {
+          font-size: 1rem;
+        }
+
+        .grid {
+          grid-template-columns: repeat(2, 1fr);
+        }
+
+        .card.overtime {
+          grid-column: 1 / -1;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="header">
+      <h1>Mapa de calor</h1>
+      <p>Selecione um dos sorters abaixo para visualizar seu monitoramento</p>
+    </div>
+
+    <div class="container">
+      <div class="grid" id="menuGrid">
+        <!-- Cards dos Sorters serão inseridos aqui via JavaScript -->
+      </div>
+    </div>
+
+    <script>
+      const sorters = [
+        { id: 1, name: "Sorter 1", code: "BRRC01", description: "Monitoramento do Sorter 1" },
+        { id: 2, name: "Sorter 2", code: "BRRC02", description: "Monitoramento do Sorter 2" },
+        { id: 3, name: "Sorter 3", code: "BRRC03", description: "Monitoramento do Sorter 3" },
+        { id: 4, name: "Sorter 4", code: "BRRC04", description: "Monitoramento do Sorter 4" },
+        { id: 5, name: "Sorter 5", code: "BRRC05", description: "Monitoramento do Sorter 5" },
+        { id: 6, name: "Sorter 6", code: "BRRC06", description: "Monitoramento do Sorter 6" },
+        { id: 7, name: "Sorter 7", code: "BRRC07", description: "Monitoramento do Sorter 7" },
+        { id: 8, name: "Sorter 8", code: "BRRC08", description: "Monitoramento do Sorter 8" },
+        { id: 9, name: "Sorter 9", code: "BRRC09", description: "Monitoramento do Sorter 9" },
+        { id: 10, name: "Sorter 10", code: "BRRC10", description: "Monitoramento do Sorter 10" },
+      ];
+
+      function createSorterCard(sorter) {
+        return `
+          <div class="card" onclick="navigateToSorter('${sorter.code}')">
+            <div class="card-content">
+              <h2>${sorter.name}</h2>
+            </div>
+          </div>
+        `;
+      }
+
+      function createOvertimeCard() {
+        return `
+          <div class="card overtime" onclick="navigateToOvertime()">
+            <div class="card-content">
+              <div class="card-icon">⏱️</div>
+              <h2>Overtime</h2>
+            </div>
+          </div>
+        `;
+      }
+
+      function navigateToSorter(deviceCode) {
+        // Navega para a rota do Flask usando o código do dispositivo
+        window.location.href = `/${deviceCode}`;
+      }
+
+      function navigateToOvertime() {
+        // Mantemos a navegação para a página de overtime (a ser implementada)
+        window.location.href = "/overtime";
+      }
+
+      window.onload = () => {
+        const grid = document.getElementById("menuGrid");
+        let html = "";
+
+        // Adiciona cards dos sorters
+        sorters.forEach((sorter) => {
+          html += createSorterCard(sorter);
+        });
+
+        // Adiciona card do overtime
+        html += createOvertimeCard();
+
+        grid.innerHTML = html;
+      };
+    </script>
+  </body>
+</html>

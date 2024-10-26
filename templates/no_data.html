@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sem Dados - Dashboard Sorter</title>
+    <style>
+        .no-data-container {
+            text-align: center;
+            padding: 2rem;
+            max-width: 600px;
+            margin: 4rem auto;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .no-data-icon {
+            font-size: 3rem;
+            color: #ffc107;
+            margin-bottom: 1rem;
+        }
+        .back-button {
+            display: inline-block;
+            padding: 0.5rem 1rem;
+            background: #007bff;
+            color: white;
+            text-decoration: none;
+            border-radius: 4px;
+            margin-top: 1rem;
+        }
+        .back-button:hover {
+            background: #0056b3;
+        }
+        .refresh-button {
+            display: inline-block;
+            padding: 0.5rem 1rem;
+            background: #28a745;
+            color: white;
+            text-decoration: none;
+            border-radius: 4px;
+            margin: 1rem;
+        }
+        .refresh-button:hover {
+            background: #218838;
+        }
+    </style>
+</head>
+<body>
+    <div class="no-data-container">
+        <div class="no-data-icon">📊</div>
+        <h1>Sem Dados Disponíveis</h1>
+        <p>{{ message }}</p>
+        <p>Dispositivo: {{ device_code }}</p>
+        <a href="/" class="back-button">Voltar ao Menu</a>
+        <a href="javascript:location.reload()" class="refresh-button">Atualizar Página</a>
+    </div>
+</body>
+</html>

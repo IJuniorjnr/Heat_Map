@@ -1,0 +1,136 @@
+body {
+    font-family: Arial, sans-serif;
+    background-color: #f0f0f0;
+    margin: 0;
+    padding: 10px;
+}
+.menu {
+    position: absolute;
+    top: 15px;
+    left: 10px;
+    cursor: pointer;
+    color: white;
+    padding: 10px;
+    font-size: 18px;
+    border: none;
+    border-radius: 4px;
+}
+
+.dropdown-content {
+    display: none;
+    position: absolute;
+    top: 50px;
+    left: 10px;
+    background-color: #f9f9f9;
+    min-width: 160px;
+    box-shadow: 0 8px 16px 0 rgba(0,0,0,0.2);
+    z-index: 1;
+}
+
+.dropdown-content button {
+    color: black;
+    padding: 12px 16px;
+    text-decoration: none;
+    display: block;
+    border: none;
+    background: none;
+    width: 100%;
+    text-align: left;
+}
+
+.dropdown-content button:hover {
+    background-color: #f1f1f1;
+}
+
+.show {
+    display: block;
+}
+nav{
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: #ffcc00;
+    height: 50px;
+    font-weight: bold;
+}
+nav span{
+    margin-left: 30px;
+    font-size: 24px;
+    color: red;
+}
+nav img{
+    display: block;
+    height: 40px;
+    margin: 0;
+}
+
+h1 {
+    text-align: center;
+    font-size: 24px;
+    margin-bottom: 15px;
+}
+
+.timers-container {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 10px;
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.timer {
+    background-color: #343a40;
+    color: #ffffff;
+    border-radius: 8px;
+    padding: 10px;
+    text-align: center;
+    width: calc(50% - 5px);
+    box-sizing: border-box;
+}
+
+.timer h2 {
+    margin: 0;
+    font-size: 14px;
+    font-weight: bold;
+}
+
+.timer p {
+    margin: 5px 0;
+    font-size: 18px;
+    font-family: 'Courier New', Courier, monospace;
+}
+
+@media (min-width: 600px) {
+    body {
+        padding: 20px;
+    }
+
+    h1 {
+        font-size: 28px;
+    }
+
+    .timers-container {
+        gap: 20px;
+    }
+
+    .timer {
+        width: calc(33.33% - 14px);
+        padding: 15px;
+        border-radius: 10px;
+    }
+
+    .timer h2 {
+        font-size: 16px;
+    }
+
+    .timer p {
+        font-size: 22px;
+    }
+}
+
+@media (min-width: 900px) {
+    .timer {
+        width: calc(25% - 15px);
+    }
+}

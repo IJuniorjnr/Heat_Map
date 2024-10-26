@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Dashboard de Overtime - TV Mode</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+            background-color: #000000;
+            color: #ffffff;
+            min-height: 100vh;
+            overflow: hidden; /* Previne scrollbars */
+        }
+
+        .header {
+            background-color: #111111;
+            padding: 0.75rem;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+
+        .header h1 {
+            color: #ffffff;
+            font-size: 1.5rem;
+            margin-bottom: 0.25rem;
+            text-align: center;
+        }
+
+        .dashboard-stats {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 0.5rem;
+            padding: 0.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-card {
+            background: #222222;
+            padding: 0.5rem;
+            border-radius: 4px;
+            text-align: center;
+        }
+
+        .stat-card h3 {
+            font-size: 0.8rem;
+            color: #cccccc;
+            margin-bottom: 0.25rem;
+        }
+
+        .stat-card .value {
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: #ffffff;
+        }
+
+        .container {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 0.75rem;
+            padding: 0.75rem;
+            margin: 0 auto;
+            height: calc(100vh - 120px); /* Altura total menos header */
+            overflow-y: auto;
+        }
+
+        .card {
+            background-color: #1a1a1a;
+            border-radius: 6px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+            transition: transform 0.2s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-2px);
+        }
+
+        .card-header {
+            padding: 0.5rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            background-color: #222222;
+            border-radius: 6px 6px 0 0;
+        }
+
+        .card-header h3 {
+            color: #ffffff;
+            font-size: 0.9rem;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .card-content {
+            padding: 0.75rem;
+        }
+
+        .timer {
+            font-size: 1.5rem;
+            font-weight: bold;
+            margin: 0.5rem 0;
+            color: #ff4444; /* Vermelho para destacar o overtime */
+            text-align: center;
+        }
+
+        .package-info {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 0.8rem;
+            color: #cccccc;
+        }
+
+        /* Adiciona uma animação de piscar para tempos críticos */
+        @keyframes blink {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+
+        .critical-time {
+            animation: blink 1s infinite;
+        }
+
+        /* Cores diferentes baseadas no tempo de overtime */
+        .overtime-normal { color: #ffab40; }  /* Laranja para overtime normal */
+        .overtime-warning { color: #ff5252; } /* Vermelho claro para avisos */
+        .overtime-critical { color: #ff1744; } /* Vermelho forte para crítico */
+
+        /* Media query para TVs e monitores grandes */
+        @media (min-width: 1920px) {
+            .container {
+                grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+            }
+
+            .header h1 {
+                font-size: 2rem;
+            }
+
+            .stat-card .value {
+                font-size: 1.5rem;
+            }
+        }
+
+        /* Modo fullscreen */
+        .fullscreen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: 9999;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="header">
+        <h1>Monitor de Overtime</h1>
+        <div class="dashboard-stats">
+            <div class="stat-card">
+                <h3>Total de canalizações em Overtime</h3>
+                <div class="value" id="totalOvertime">0</div>
+            </div>
+            <div class="stat-card">
+                <h3>Canalizações Label A</h3>
+                <div class="value" id="totalSheinbox">0</div>
+            </div>
+            <div class="stat-card">
+                <h3>Canalizações Label B</h3>
+                <div class="value" id="totalOutbound">0</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="container" id="overtimeContainer">
+        <!-- Cards serão inseridos aqui via JavaScript -->
+    </div>
+
+    <script>
+        let activeTimerIntervals = [];
+        const deviceCodes = ['BRRC01', 'BRRC02', 'BRRC03', 'BRRC04', 'BRRC05', 'BRRC06', 'BRRC07', 'BRRC08', 'BRRC09', 'BRRC10'];
+
+        const socket = io();
+
+        socket.on('connect', () => {
+            console.log('Conectado ao servidor Socket.IO');
+            socket.emit('start_overtime_updates');
+        });
+
+        socket.on('update_overtime', (data) => {
+            console.log('Dados de overtime atualizados:', data);
+            activeTimerIntervals.forEach(interval => clearInterval(interval));
+            activeTimerIntervals = [];
+            displayOvertimeCases(data);
+        });
+
+        function formatTime(seconds) {
+            const hrs = Math.floor(seconds / 3600);
+            const mins = Math.floor((seconds % 3600) / 60);
+            const secs = seconds % 60;
+            return `${hrs.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+        }
+
+        function getTimeClass(seconds) {
+            if (seconds >= 14400) { // 4 horas
+                return 'overtime-critical critical-time';
+            } else if (seconds >= 10800) { // 3 horas
+                return 'overtime-warning';
+            } else {
+                return 'overtime-normal';
+            }
+        }
+
+        function createOvertimeCard(caseData) {
+            const card = document.createElement('div');
+            card.className = 'card';
+
+            const packagesField = caseData.NumberOfSubPackages !== undefined ? 'NumberOfSubPackages' : 'NumberOfPackages';
+            const packagesLabel = caseData.NumberOfSubPackages !== undefined ? 'SubPacotes' : 'Pacotes';
+
+            const timeClass = getTimeClass(caseData.TimeDifference_Seconds);
+
+            card.innerHTML = `
+                <div class="card-header">
+                    <h3>${caseData.ActualArrivalDestination || caseData.DeviceCode}</h3>
+                </div>
+                <div class="card-content">
+                    <div class="timer ${timeClass}" data-seconds="${caseData.TimeDifference_Seconds}">
+                        ${formatTime(caseData.TimeDifference_Seconds)}
+                    </div>
+                    <div class="package-info">
+                        <span>${packagesLabel}: ${caseData[packagesField]}</span>
+                    </div>
+                </div>
+            `;
+
+            return card;
+        }
+
+        function updateStats(data) {
+            document.getElementById('totalOvertime').textContent = data.total_stats.total_overtime_cases;
+            document.getElementById('totalSheinbox').textContent = data.total_stats.total_sheinbox_cases;
+            document.getElementById('totalOutbound').textContent = data.total_stats.total_outbound_cases;
+        }
+
+        function displayOvertimeCases(data) {
+            const container = document.getElementById('overtimeContainer');
+            container.innerHTML = '';
+
+            let allCases = [];
+            deviceCodes.forEach(deviceCode => {
+                const sheinboxCases = data.sheinbox.filter(c => c.DeviceCode === deviceCode);
+                const outboundCases = data.outbound.filter(c => c.DeviceCode === deviceCode);
+                allCases = allCases.concat(sheinboxCases, outboundCases);
+            });
+
+            allCases.sort((a, b) => b.TimeDifference_Seconds - a.TimeDifference_Seconds);
+
+            allCases.forEach(caseData => {
+                container.appendChild(createOvertimeCard(caseData));
+            });
+
+            updateStats(data);
+            startTimers();
+        }
+
+        function startTimers() {
+            const timers = document.querySelectorAll('.timer');
+
+            timers.forEach(timer => {
+                let seconds = parseInt(timer.dataset.seconds);
+                const interval = setInterval(() => {
+                    seconds++;
+                    timer.textContent = formatTime(seconds);
+                    timer.className = `timer ${getTimeClass(seconds)}`;
+                }, 1000);
+                activeTimerIntervals.push(interval);
+            });
+        }
+
+        // Função para alternar modo fullscreen
+        function toggleFullscreen() {
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen();
+            } else {
+                document.exitFullscreen();
+            }
+        }
+
+        // Listener para tecla F11
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'F11') {
+                e.preventDefault();
+                toggleFullscreen();
+            }
+        });
+
+        // Inicialização com dados iniciais
+        window.onload = () => {
+        const initialData = {{ data | tojson }};
+        console.log("Dados iniciais carregados:", initialData);
+        displayOvertimeCases(initialData);
+        };
+    </script>
+</body>
+
+</html>
