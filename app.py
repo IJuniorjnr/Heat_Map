@@ -6,21 +6,19 @@ import re
 from datetime import datetime, timedelta
 import threading
 import time
-from gevent import monkey
-
-monkey.patch_all()
+import os
 
 app = Flask(__name__)
-app.config['SECRET_KEY'] = '35769120'  # Necessário para Flask-SocketIO
+app.config['SECRET_KEY'] = 'sua_chave_secreta_aqui'  # Necessário para Flask-SocketIO
 socketio = SocketIO(app, cors_allowed_origins="*")
 
 def get_warehouse_data(device_code):
     # Configurações de conexão
-    server = '177.93.106.3'
-    database = 'CCT'
-    username = 'erangel'
-    password = 'Brasil@23'
- 
+    server = os.getenv("DB_SERVER")
+    database = os.getenv("DB_DATABASE")
+    username = os.getenv("DB_USERNAME")
+    password = os.getenv("DB_PASSWORD")
+    
     try:
         # Estabelece a conexão
         conn = pyodbc.connect(
@@ -108,10 +106,10 @@ def get_warehouse_data(device_code):
 
 def get_overtime_data():
     # Configurações de conexão
-    server = '177.93.106.3'
-    database = 'CCT'
-    username = 'erangel'
-    password = 'Brasil@23'
+    server = os.getenv("DB_SERVER")
+    database = os.getenv("DB_DATABASE")
+    username = os.getenv("DB_USERNAME")
+    password = os.getenv("DB_PASSWORD")
  
     try:
         # Estabelece a conexão
@@ -355,4 +353,4 @@ def overtime():
     return render_template('overtime.html', data=data)
 
 if __name__ == '__main__':
-    socketio.run(app, debug=True, host='0.0.0.0', port=5000)
+    socketio.run(app, debug=True, allow_unsafe_werkzeug=True)
