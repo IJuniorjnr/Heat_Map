@@ -1,6 +1,6 @@
 from flask import Flask, render_template, jsonify
 from flask_socketio import SocketIO, emit
-import pyodbc
+import pymssql
 import pandas as pd
 import re
 from datetime import datetime, timedelta
@@ -18,11 +18,14 @@ def get_warehouse_data(device_code):
     database = os.getenv("DB_DATABASE")
     username = os.getenv("DB_USERNAME")
     password = os.getenv("DB_PASSWORD")
-    
+ 
     try:
         # Estabelece a conexão
-        conn = pyodbc.connect(
-            f'DRIVER={{SQL Server}};SERVER={server};DATABASE={database};UID={username};PWD={password}'
+        conn = pymssql.connect(
+            server=server,
+            database=database,
+            user=username,
+            password=password
         )
  
         # Primeira consulta SQL (SheinBox)
@@ -86,7 +89,7 @@ def get_warehouse_data(device_code):
             'outbound': data_outbound
         }
  
-    except pyodbc.Error as e:
+    except pymssql.Error as e:
         return {
             'status': 'db_error',
             'message': f"Erro na conexão com o banco de dados: {str(e)}",
@@ -113,11 +116,13 @@ def get_overtime_data():
  
     try:
         # Estabelece a conexão
-        conn = pyodbc.connect(
-            f'DRIVER={{SQL Server}};SERVER={server};DATABASE={database};UID={username};PWD={password}'
+        conn = pymssql.connect(
+            server=server,
+            database=database,
+            user=username,
+            password=password
         )
  
-        # [Suas queries SQL permanecem as mesmas]
         query1 = """
         SELECT 
             DeviceCode,
@@ -161,7 +166,7 @@ def get_overtime_data():
         df1 = pd.read_sql(query1, conn)
         df2 = pd.read_sql(query2, conn)
  
-        # Agrupa os dados por DeviceCode para estatísticas (modificado para evitar multi-índice)
+        # Agrupa os dados por DeviceCode para estatísticas
         stats_sheinbox = df1.groupby('DeviceCode').agg({
             'ShelfContainerNumber': 'count',
             'TimeDifference_Seconds': ['mean', 'max', 'min']
@@ -242,7 +247,7 @@ def get_overtime_data():
             'total_stats': total_stats
         }
  
-    except pyodbc.Error as e:
+    except pymssql.Error as e:
         return {
             'status': 'db_error',
             'message': f"Erro na conexão com o banco de dados: {str(e)}",
